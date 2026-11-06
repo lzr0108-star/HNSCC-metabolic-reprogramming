@@ -22,6 +22,8 @@
   stop("config.R not found; please run from within the repository.")
 })()
 source(..cfg_file)
+# project-specific color palette (repository scripts directory)
+source(file.path(root, "scripts", "palette_project.R"))
 
 suppressPackageStartupMessages({ library(copykat); library(Seurat); library(tidyverse) })
 set.seed(20260811)
@@ -89,9 +91,8 @@ cat("agreement CopyKAT vs original cancer label:",
     round(mean(ck_alg == (sub$cancer_cell == 1), na.rm = TRUE), 4), "\n")
 
 # ---- 6. 子集 UMAP 着色图 ----------------------------------------------------
-p <- DimPlot(sub, group.by = "copykat_pred",
-             cols = c("aneuploid" = "#8A0612", "diploid" = "#123B7A",
-                      "not.defined" = "grey70")) + ggtitle("CopyKAT (1000 representative cells)")
+p <- DimPlot(sub, group.by = "copykat_pred", cols = copykat_pal) +
+      ggtitle("CopyKAT (1000 representative cells)")
 ggsave(file.path(root, "figures", "01_QC", "07_copykat_subset_umap.pdf"),
        p, width = 6.5, height = 5.5)
 

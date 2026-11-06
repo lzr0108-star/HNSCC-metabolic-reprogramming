@@ -15,8 +15,10 @@
   stop("config.R not found; please run from within the repository.")
 })()
 source(..cfg_file)
+# project-specific color palette (repository scripts directory)
+source(file.path(root, "scripts", "palette_project.R"))
 
-suppressPackageStartupMessages({ library(Seurat); library(tidyverse); library(ggsci) })
+suppressPackageStartupMessages({ library(Seurat); library(tidyverse) })
 set.seed(20260811)
 root <- hnscc_root
 fig <- file.path(root, "figures", "01_QC")
@@ -50,20 +52,19 @@ mal <- obj$cell_type == "Malignant"
 agree <- mean(mal == (obj$cancer_cell == 1))
 cat("\nagreement with original cancer label:", round(agree, 4), "\n")
 
-# ---- 注释 UMAP 图 -----------------------------------------------------------
-pal <- c("Malignant"="#8A0612", "CAF"="#D8B96A", "T/NK"="#123B7A", "Treg"="#7E6148",
-         "B cell"="#00A087", "Plasma"="#3C5488", "Endothelial"="#E64B35",
-         "Macrophage"="#F39B7F", "Mast"="#B09C85", "Dendritic"="#8491B4", "Myocyte"="#91D1C2")
-p1 <- DimPlot(obj, group.by = "cell_type", cols = pal, label = FALSE) + ggtitle("Cell type")
-p2 <- DimPlot(obj, group.by = "cell_subtype", label = TRUE) + ggtitle("Subtype") +
-      theme(legend.position = "none")
+# ---- 注释 UMAP 图 (项目专用配色) --------------------------------------------
+sub_lv <- levels(obj$cell_subtype)
+p1 <- DimPlot(obj, group.by = "cell_type", cols = cell_pal, label = FALSE) + ggtitle("Cell type")
+p2 <- DimPlot(obj, group.by = "cell_subtype",
+              cols = setNames(multi_pal(length(sub_lv)), sub_lv), label = TRUE) +
+      ggtitle("Subtype") + theme(legend.position = "none")
 ggsave(file.path(fig, "05_umap_annotated.pdf"), p1 | p2, width = 15, height = 6.5)
 
 # 按患者/淋巴结的组成
 comp <- obj@meta.data %>% filter(!is_combo) %>%
   count(patient, cell_type) %>% group_by(patient) %>% mutate(prop = n/sum(n))
 p3 <- ggplot(comp, aes(patient, prop, fill = cell_type)) +
-  geom_col() + scale_fill_manual(values = pal) +
+  geom_col() + scale_fill_manual(values = cell_pal) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1), axis.text = element_text(size = 7)) +
   labs(x = "", y = "Proportion", fill = "Cell type")
 ggsave(file.path(fig, "06_composition_by_patient.pdf"), p3, width = 10, height = 5)

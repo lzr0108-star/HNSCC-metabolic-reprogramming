@@ -16,9 +16,11 @@
   stop("config.R not found; please run from within the repository.")
 })()
 source(..cfg_file)
+# project-specific color palette (repository scripts directory)
+source(file.path(root, "scripts", "palette_project.R"))
 
 suppressPackageStartupMessages({
-  library(Seurat); library(harmony); library(tidyverse); library(patchwork); library(ggsci)
+  library(Seurat); library(harmony); library(tidyverse); library(patchwork)
 })
 set.seed(20260811)
 root <- hnscc_root
@@ -60,17 +62,22 @@ Idents(obj) <- "RNA_snn_res.0.3"
 saveRDS(obj, file.path(res, "01_seurat_clustered.rds"))
 cat("clustered object saved:", ncol(obj), "cells,", length(levels(obj$RNA_snn_res.0.3)), "clusters @0.3\n")
 
-# ---- 6. QC/UMAP 图 ----------------------------------------------------------
+# ---- 6. QC/UMAP 图 (项目专用配色) -------------------------------------------
 qc_feats <- c("nFeature_RNA", "nCount_RNA", "percent.ribo")
-p1 <- VlnPlot(obj, features = qc_feats, group.by = "patient", pt.size = 0, ncol = 3) &
+pat_lv <- levels(as.factor(obj$patient))
+p1 <- VlnPlot(obj, features = qc_feats, group.by = "patient", pt.size = 0, ncol = 3,
+              cols = setNames(multi_pal(length(pat_lv)), pat_lv)) &
       theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 6))
 ggsave(file.path(fig, "01_qc_violin_by_patient.pdf"), p1, width = 13, height = 4.5)
 
-p2 <- DimPlot(obj, reduction = "umap", group.by = "RNA_snn_res.0.3", label = TRUE) +
+cl_lv <- levels(obj$RNA_snn_res.0.3)
+p2 <- DimPlot(obj, reduction = "umap", group.by = "RNA_snn_res.0.3", label = TRUE,
+              cols = setNames(multi_pal(length(cl_lv)), cl_lv)) +
       ggtitle("Unsupervised clusters (res 0.3)")
-p3 <- DimPlot(obj, reduction = "umap", group.by = "patient") + ggtitle("Patient")
+p3 <- DimPlot(obj, reduction = "umap", group.by = "patient",
+              cols = setNames(multi_pal(length(pat_lv)), pat_lv)) + ggtitle("Patient")
 p4 <- DimPlot(obj, reduction = "umap", group.by = "cancer_cell",
-              cols = c("0" = "#4DBBD5", "1" = "#E64B35")) + ggtitle("Original cancer label")
+              cols = cancer_pal) + ggtitle("Original cancer label")
 ggsave(file.path(fig, "02_umap_cluster_patient_cancer.pdf"),
        p2 / (p3 | p4), width = 12, height = 11)
 
